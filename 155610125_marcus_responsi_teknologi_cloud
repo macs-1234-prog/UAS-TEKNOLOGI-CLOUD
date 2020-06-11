@@ -1,1 +1,571 @@
 
+Docker Networking Hands-on Lab
+Di lab ini Anda akan belajar tentang konsep-konsep utama Docker Networking. 
+Anda akan mendapatkan tangan Anda kotor dengan melihat contoh-contoh dari beberapa
+ konsep jaringan dasar, belajar tentang jaringan Bridge, dan akhirnya Overlay 
+networking.
+Pemula sampai Menengah
+Bagian # 1 - Dasar-Dasar Jaringan
+Langkah 1: Perintah Jaringan Docker
+Perintah jaringan buruh pelabuhan adalah perintah utama untuk mengonfigurasi dan mengelola jaringan kontainer. Jalankan perintah jaringan buruh pelabuhan dari terminal pertama.
+docker network
+Play with Docker classroom
+Docker Networking Hands-on Lab
+Jan 20, 2017
+
+In this lab you will learn about key Docker Networking concepts. You will get your hands dirty by going through examples of a few basic networking concepts, learn about Bridge networking, and finally Overlay networking.
+
+Difficulty: Beginner to Intermediate
+
+Time: Approximately 45 minutes
+
+Tasks:
+
+Section #1 - Networking Basics
+Section #2 - Bridge Networking
+Section #3 - Overlay Networking
+Cleaning Up
+Section #1 - Networking Basics
+Step 1: The Docker Network Command
+The docker network command is the main command for configuring and managing container networks. Run the docker network command from the first terminal.
+
+docker network
+
+Usage:	docker network COMMAND
+
+Manage networks
+
+Options:
+      --help   Print usage
+
+Commands:
+  connect     Connect a container to a network
+  create      Create a network
+  disconnect  Disconnect a container from a network
+  inspect     Display detailed information on one or more networks
+  ls          List networks
+  prune       Remove all unused networks
+  rm          Remove one or more networks
+
+Run 'docker network COMMAND --help' for more information on a command.
+Output perintah menunjukkan bagaimana menggunakan perintah dan juga semua sub-perintah jaringan buruh pelabuhan. Seperti yang Anda lihat dari output, perintah jaringan buruh pelabuhan memungkinkan Anda membuat jaringan baru, mendaftar jaringan yang ada, memeriksa jaringan, dan menghapus jaringan. Ini juga memungkinkan Anda untuk menghubungkan dan memutuskan wadah dari jaringan.
+Langkah 2: Daftar jaringan
+Jalankan jaringan buruh pelabuhan ls perintah untuk melihat jaringan kontainer yang ada pada host Docker saat ini.
+docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+3430ad6f20bf        bridge              bridge              local
+a7449465c379        host                host                local
+06c349b9cc77        none                null                local
+Output di atas menunjukkan jaringan kontainer yang dibuat sebagai bagian dari instalasi standar Docker.
+Jaringan baru yang saya buat juga akan muncul di output dari perintah docker network ls.
+
+Saya dapat melihat bahwa setiap jaringan mendapatkan ID dan NAME yang unik. Setiap jaringan juga dikaitkan dengan satu driver. Perhatikan bahwa jaringan "jembatan" dan jaringan "host" memiliki nama yang sama dengan driver masing-masing.
+Langkah 3: Periksa jaringan
+Perintah inspeksi jaringan buruh pelabuhan digunakan untuk melihat detail konfigurasi jaringan. Rincian ini meliputi; nama, ID, driver, driver IPAM, info subnet, wadah terhubung, dan banyak lagi.
+
+Gunakan jaringan docker periksa <network> untuk melihat detail konfigurasi dari jaringan kontainer pada host Docker Anda. Perintah di bawah ini menunjukkan rincian jaringan yang disebut jembatan.
+docker network inspect bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "3430ad6f20bf1486df2e5f64ddc93cc4ff95d81f59b6baea8a510ad500df2e57",
+        "Created": "2017-04-03T16:49:58.6536278Z",
+        "Scope": "local",
+        "Driver": "bridge",
+"EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+"Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Containers": {},
+"Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+"com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+"com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+Langkah 4: Daftar plugin driver jaringan
+Perintah info buruh pelabuhan menunjukkan banyak informasi menarik tentang pemasangan Docker.
+
+Jalankan perintah info buruh pelabuhan dan temukan daftar plugin jaringan.
+docker info
+Containers: 0
+ Running: 0
+ Paused: 0
+ Stopped: 0
+Images: 0
+Server Version: 17.03.1-ee-3
+Storage Driver: aufs
+<Snip>
+Plugins:
+ Volume: local
+ Network: bridge host macvlan null overlay
+Swarm: inactive
+Runtimes: runc
+<Snip>
+Output di atas menunjukkan driver bridge, host, macvlan, null, dan overlay.
+Bagian # 2 - Jembatan Jaringan
+Langkah 1: Dasar-Dasarnya
+Setiap instalasi Docker yang bersih dilengkapi dengan jaringan yang disebut jembatan. Verifikasi ini dengan jaringan buruh pelabuhan ls.
+docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+3430ad6f20bf        bridge              bridge              local
+a7449465c379        host                host                local
+06c349b9cc77        none                null                local
+Output di atas menunjukkan bahwa jaringan jembatan dikaitkan dengan driver jembatan. Penting untuk dicatat bahwa jaringan dan driver terhubung, tetapi mereka tidak sama. Dalam contoh ini jaringan dan driver memiliki nama yang sama - tetapi mereka bukan hal yang sama!
+Output di atas juga menunjukkan bahwa jaringan jembatan dicakup secara lokal. Ini berarti bahwa jaringan hanya ada pada host Docker ini. Ini berlaku untuk semua jaringan yang menggunakan driver jembatan - driver jembatan menyediakan jaringan host tunggal.
+
+Semua jaringan yang dibuat dengan driver jembatan didasarkan pada Linux bridge (a.k.a. switch virtual).
+Instal perintah brctl dan gunakan untuk mendaftar Linux bridges di host Docker Anda. Anda dapat melakukan ini dengan menjalankan sudo apt-get install bridge-utils.
+apk update
+apk add bridge
+Lalu, daftarkan jembatan pada host Docker Anda, dengan menjalankan brctl show.
+brctl show
+bridge name	bridge id		STP enabled	interfaces
+docker0		8000.024252ed52f7	no
+Output di atas menunjukkan jembatan Linux tunggal yang disebut docker0. Ini adalah jembatan yang secara otomatis dibuat untuk jaringan jembatan. Anda dapat melihat bahwa saat ini tidak ada antarmuka yang terhubung.
+
+Anda juga dapat menggunakan perintah ip a untuk melihat detail jembatan docker0.
+ip a
+<Snip>
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:52:ed:52:f7 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 scope global docker0
+       valid_lft forever preferred_lft forever
+Langkah 2: Hubungkan wadah
+Jaringan jembatan adalah jaringan default untuk wadah baru. Ini berarti bahwa kecuali Anda menentukan jaringan yang berbeda, semua kontainer baru akan terhubung ke jaringan jembatan.
+
+Buat wadah baru dengan menjalankan docker run -dt ubuntu sleep infinity.
+docker run -dt ubuntu sleep infinity
+Unable to find image 'ubuntu:latest' locally
+latest: Pulling from library/ubuntu
+d54efb8db41d: Pull complete
+f8b845f45a87: Pull complete
+e8db7bf7c39f: Pull complete
+9654c40e9079: Pull complete
+6d9ef359eaaa: Pull complete
+Digest: sha256:dd7808d8792c9841d0b460122f1acf0a2dd1f56404f8d1e56298048885e45535
+Status: Downloaded newer image for ubuntu:latest
+846af8479944d406843c90a39cba68373c619d1feaa932719260a5f5afddbf71
+Perintah ini akan membuat wadah baru berdasarkan ubuntu: gambar terbaru dan akan menjalankan perintah tidur untuk menjaga wadah tetap berjalan di latar belakang. Anda dapat memverifikasi wadah contoh kami sudah habis dengan menjalankan buruh pelabuhan ps.
+docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+846af8479944        ubuntu              "sleep infinity"    55 seconds ago      Up 54 seconds                           heuristic_boyd
+Karena tidak ada jaringan yang ditentukan pada perintah docker run, kontainer akan ditambahkan ke jaringan bridge.
+
+Jalankan perintah show brctl lagi.
+brctl show
+bridge name	bridge id		STP enabled	interfaces
+docker0		8000.024252ed52f7	no		vethd630437
+Perhatikan bagaimana jembatan docker0 sekarang memiliki antarmuka yang terhubung. Antarmuka ini menghubungkan jembatan docker0 ke wadah baru yang baru saja dibuat.
+
+Anda dapat memeriksa jaringan jembatan lagi, dengan menjalankan jaringan buruh pelabuhan memeriksa jembatan, untuk melihat wadah baru yang melekat padanya.
+docker network inspect bridge
+<Snip>
+        "Containers": {
+            "846af8479944d406843c90a39cba68373c619d1feaa932719260a5f5afddbf71": {
+                "Name": "heuristic_boyd",
+                "End
+pointID": "1265c418f0b812004d80336bafdc4437eda976f166c11dbcc97d365b2bfa91e5",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+<Snip>
+Langkah 3: Uji konektivitas jaringan
+Output ke perintah inspeksi jaringan buruh pelabuhan sebelumnya menunjukkan alamat IP wadah baru. Dalam contoh sebelumnya ini adalah "172.17.0.2" tetapi milik Anda mungkin berbeda.
+
+Ping alamat IP wadah dari prompt shell host Docker Anda dengan menjalankan ping -c5 <Alamat IPv4>. Ingatlah untuk menggunakan IP wadah di lingkungan Anda.
+ping -c5 172.17.0.2
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.055 ms
+64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.031 ms
+64 bytes from 172.17.0.2: icmp_seq=3 ttl=64 time=0.034 ms
+64 bytes from 172.17.0.2: icmp_seq=4 ttl=64 time=0.041 ms
+64 bytes from 172.17.0.2: icmp_seq=5 ttl=64 time=0.047 ms
+--- 172.17.0.2 ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4075ms
+rtt min/avg/max/mdev = 0.031/0.041/0.055/0.011 ms
+Balasan di atas menunjukkan bahwa host Docker dapat melakukan ping kontainer melalui jaringan jembatan. Namun, kami juga dapat memverifikasi bahwa wadah tersebut dapat terhubung ke dunia luar juga. Mari masuk ke dalam wadah, instal program ping, lalu ping www.github.com.
+
+Pertama, kita perlu mendapatkan ID wadah dimulai pada langkah sebelumnya. Anda dapat menjalankan buruh pelabuhan ps untuk mendapatkan itu.
+docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+846af8479944        ubuntu              "sleep infinity"    7 minutes ago       Up 7 minutes                            heuristic_boyd
+Selanjutnya, mari kita jalankan shell di dalam wadah ubuntu itu, dengan menjalankan docker exec -it <CONTAINER ID> / bin / bash.
+docker exec -it yourcontainerid /bin/bash
+root@846af8479944:/#
+Selanjutnya, kita perlu menginstal program ping. Jadi, mari kita jalankan pembaruan apt-get && apt-get install -y iputils-ping.
+apt-get update && apt-get install -y iputils-ping
+Mari ping www.github.com dengan menjalankan ping -c5 www.github.com
+  ping -c5 www.github.com
+PING www.docker.com (104.239.220.248) 56(84) bytes of data.
+64 bytes from 104.239.220.248: icmp_seq=1 ttl=45 time=38.1 ms
+64 bytes from 104.239.220.248: icmp_seq=2 ttl=45 time=37.3 ms
+64 bytes from 104.239.220.248: icmp_seq=4 ttl=45 time=37.5 ms
+64 bytes from 104.239.220.248: icmp_seq=5 ttl=45 time=37.5 ms
+
+--- www.docker.com ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4003ms
+rtt min/avg/max/mdev = 37.372/37.641/38.143/0.314 ms
+Akhirnya, mari kita lepaskan shell kita dari kontainer, dengan menjalankan exit.
+exit
+Kita juga harus menghentikan wadah ini sehingga kita membersihkan semuanya dari tes ini, dengan menjalankan docker stop <CONTAINER ID>.
+docker stop yourcontainerid
+Ini menunjukkan bahwa wadah baru dapat melakukan ping ke internet dan karenanya memiliki konfigurasi jaringan yang valid dan berfungsi
+Langkah 4: Konfigurasikan NAT untuk konektivitas eksternal
+Dalam langkah ini kami akan memulai wadah NGINX baru dan memetakan port 8080 pada host Docker ke port 80 di dalam wadah. Ini berarti bahwa lalu lintas yang mengenai host Docker di port 8080 akan diteruskan ke port 80 di dalam wadah.
+Mulai wadah baru berdasarkan gambar NGINX resmi dengan menjalankan docker run --name web1 -d -p 8080: 80 nginx.
+docker run --name web1 -d -p 8080:80 nginx
+Unable to find image 'nginx:latest' locally
+latest: Pulling from library/nginx
+6d827a3ef358: Pull complete
+b556b18c7952: Pull complete
+03558b976e24: Pull complete
+9abee7e1ef9d: Pull complete
+Digest: sha256:52f84ace6ea43f2f58937e5f9fc562e99ad6876e82b99d171916c1ece587c188
+Status: Downloaded newer image for nginx:latest
+4e0da45b0f169f18b0e1ee9bf779500cb0f756402c0a0821d55565f162741b3e
+Tinjau status kontainer dan pemetaan port dengan menjalankan docker ps.
+docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                           NAMES
+4e0da45b0f16        nginx               "nginx -g 'daemon ..."   2 minutes ago       Up 2 minutes        443/tcp, 0.0.0.0:8080->80/tcp   web1
+Baris teratas menunjukkan wadah web1 baru yang menjalankan NGINX. Perhatikan perintah yang dijalankan kontainer serta pemetaan port - 0.0.0.0:8080->80/tcp memetakan port 8080 pada semua antarmuka host ke port 80 di dalam wadah web1. Pemetaan port inilah yang secara efektif membuat layanan web kontainer dapat diakses dari sumber eksternal (melalui Docker host alamat IP pada port 8080).
+Sekarang wadah sedang berjalan dan dipetakan ke port pada antarmuka host Anda dapat menguji konektivitas ke server web NGINX.
+Untuk menyelesaikan tugas berikut ini, Anda memerlukan alamat IP host Docker Anda. Ini harus menjadi alamat IP yang dapat Anda jangkau (mis. Lab Anda dihosting di Azure sehingga ini akan menjadi IP Publik contoh - yang Anda masukkan ke SSH). Arahkan browser web Anda ke IP dan port 8080 host Docker Anda. Juga, jika Anda mencoba menghubungkan ke alamat IP yang sama pada nomor port yang berbeda itu akan gagal.
+Jika karena alasan tertentu Anda tidak dapat membuka sesi dari web broswer, Anda dapat terhubung dari host Docker Anda menggunakan perintah curl 127.0.0.1:8080.
+curl 127.0.0.1:8080
+<!DOCTYPE html>
+<html>
+<Snip>
+<head>
+<title>Welcome to nginx!</title>
+    <Snip>
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+Jika Anda mencoba dan menggulung alamat IP pada nomor port yang berbeda, itu akan gagal.
+Bagian # 3 - Overlay Networking
+Langkah 1: Dasar-Dasarnya
+Pada langkah ini Anda akan menginisialisasi Swarm baru, bergabung dengan node pekerja tunggal, dan verifikasi operasi berhasil.
+Jalankan docker swarm init --advertise-addr $(hostname -i).
+docker swarm init --advertise-addr $(hostname -i)
+Swarm initialized: current node (rzyy572arjko2w0j82zvjkc6u) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join \
+--token SWMTKN-1-69b2x1u2wtjdmot0oqxjw1r2d27f0lbmhfxhvj83chln1l6es5-37ykdpul0vylenefe2439cqpf \
+    10.0.0.5:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+Dalam copy terminal pertama, seluruh buruh pelabuhan bergabung ... perintah yang ditampilkan sebagai bagian dari output dari output terminal Anda. Kemudian, rekatkan perintah yang disalin ke terminal kedua.
+docker swarm join \
+>     --token SWMTKN-1-69b2x1u2wtjdmot0oqxjw1r2d27f0lbmhfxhvj83chln1l6es5-37ykdpul0vylenefe2439cqpf \
+>     10.0.0.5:2377
+This node joined a swarm as a worker.
+Jalankan node docker ls untuk memverifikasi bahwa kedua node adalah bagian dari Swarm.
+docker node ls
+ID                           HOSTNAME  STATUS  AVAILABILITY  MANAGER STATUS
+ijjmqthkdya65h9rjzyngdn48    node2   Ready   Active
+rzyy572arjko2w0j82zvjkc6u *  node1   Ready   Active        Leader
+Nilai ID dan HOSTNAME mungkin berbeda di lab Anda. Yang penting untuk diperiksa adalah bahwa kedua node telah bergabung dengan Swarm dan siap dan aktif.
+Langkah 2: Buat jaringan overlay
+Sekarang Anda memiliki Swarm yang diinisialisasi saatnya untuk membuat jaringan overlay.
+
+Buat jaringan overlay baru yang disebut "overnet" dengan menjalankan jaringan docker buat -d overlay overnet.
+docker network create -d overlay overnet
+wlqnvajmmzskn84bqbdi1ytuy
+Gunakan perintah docker network ls untuk memverifikasi bahwa jaringan berhasil dibuat.
+docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+3430ad6f20bf        bridge              bridge              local
+a4d584350f09        docker_gwbridge     bridge              local
+a7449465c379        host                host                local
+8hq1n8nak54x        ingress             overlay             swarm
+06c349b9cc77        none                null                local
+wlqnvajmmzsk        overnet             overlay             swarm
+Jaringan "overnet" yang baru ditunjukkan pada baris terakhir dari output di atas. Perhatikan bagaimana hal itu dikaitkan dengan driver overlay dan dicakup ke seluruh Swarm.
+Jalankan perintah docker network ls yang sama dari terminal kedua.
+docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+55f10b3fb8ed        bridge              bridge              local
+b7b30433a639        docker_gwbridge     bridge              local
+a7449465c379        host                host                local
+8hq1n8nak54x        ingress             overlay             swarm
+06c349b9cc77        none                null                local
+Perhatikan bahwa jaringan "overnet" tidak muncul dalam daftar. Ini karena Docker hanya memperluas jaringan overlay ke host ketika diperlukan. Ini biasanya ketika host menjalankan tugas dari layanan yang dibuat di jaringan. Kami akan segera melihat ini.
+
+Gunakan jaringan buruh pelabuhan periksa perintah <network> untuk melihat informasi lebih rinci tentang jaringan "overnet". Anda perlu menjalankan perintah ini dari terminal pertama.
+docker network inspect overnet
+[
+    {
+        "Name": "overnet",
+        "Id": "wlqnvajmmzskn84bqbdi1ytuy",
+        "Created": "0001-01-01T00:00:00Z",
+        "Scope": "swarm",
+        "Driver": "overlay",
+"EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": []
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Containers": null,
+"Options": {
+            "com.docker.network.driver.overlay.vxlanid_list": "4097"
+        },
+        "Labels": null
+    }
+]
+Langkah 3: Buat layanan
+Sekarang kami memiliki jaringan Swarm yang diinisialisasi dan overlay, saatnya untuk membuat layanan yang menggunakan jaringan.
+
+Jalankan perintah berikut dari terminal pertama untuk membuat layanan baru bernama myservice pada jaringan overnet dengan dua tugas / replika.
+docker service create --name myservice \
+--network overnet \
+--replicas 2 \
+ubuntu sleep infinity
+ov30itv6t2n7axy2goqbfqt5e
+Verifikasi bahwa layanan dibuat dan kedua replika sudah aktif dengan menjalankan layanan buruh pelabuhan ls.
+docker service ls
+ID            NAME       MODE        REPLICAS  IMAGE
+ov30itv6t2n7  myservice  replicated  2/2       ubuntu:latest
+2/2 di kolom REPLICAS menunjukkan bahwa kedua tugas dalam layanan sudah berjalan dan berjalan.
+
+Pastikan bahwa satu tugas (replika) berjalan di masing-masing dari dua node di Swarm dengan menjalankan layanan buruh pelabuhan dan layanan saya.
+docker service ps myservice
+ID            NAME         IMAGE          NODE     DESIRED STATE  CURRENT STATE               ERROR  PORTS
+riicggj5tuta  myservice.1  ubuntu:latest  node2  Running        Running about a minute ago
+nlozn82wsttv  myservice.2  ubuntu:latest  node1  Running        Running about a minute ago
+Nilai ID dan NODE mungkin berbeda dalam output Anda. Yang penting untuk diperhatikan adalah bahwa setiap tugas / replika berjalan pada node yang berbeda.
+
+Sekarang simpul kedua menjalankan tugas pada jaringan "overnet", ia akan dapat melihat jaringan "overnet". Mari kita jalankan jaringan buruh pelabuhan dari terminal kedua untuk memverifikasi ini.
+docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+55f10b3fb8ed        bridge              bridge              local
+b7b30433a639        docker_gwbridge     bridge              local
+a7449465c379        host                host                local
+8hq1n8nak54x        ingress             overlay             swarm
+06c349b9cc77        none                null                local
+wlqnvajmmzsk        overnet             overlay             swarm
+Kami juga dapat menjalankan jaringan buruh pelabuhan memeriksa overnet pada terminal kedua untuk mendapatkan informasi lebih rinci tentang jaringan "overnet" dan mendapatkan alamat IP dari tugas yang berjalan pada terminal kedua.
+docker network inspect overnet
+[
+    {
+        "Name": "overnet",
+        "Id": "wlqnvajmmzskn84bqbdi1ytuy",
+        "Created": "2017-04-04T09:35:47.526642642Z",
+        "Scope": "swarm",
+        "Driver": "overlay",
+        "EnableIPv6": false,
+        "IPAM": {
+"Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "10.0.0.0/24",
+                    "Gateway": "10.0.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Containers": {
+"fbc8bb0834429a68b2ccef25d3c90135dbda41e08b300f07845cb7f082bcdf01": {
+                "Name": "myservice.1.riicggj5tutar7h7sgsvqg72r",
+                "EndpointID": "8edf83ebce77aed6d0193295c80c6aa7a5b76a08880a166002ecda3a2099bb6c",
+                "MacAddress": "02:42:0a:00:00:03",
+                "IPv4Address": "10.0.0.3/24",
+                "IPv6Address": ""
+            }
+        },
+"Options": {
+            "com.docker.network.driver.overlay.vxlanid_list": "4097"
+        },
+        "Labels": {},
+        "Peers": [
+            {
+                "Name": "node1-f6a6f8e18a9d",
+                "IP": "10.0.0.5"
+            },
+            {
+                "Name": "node2-507a763bed93",
+"IP": "10.0.0.6"
+            }
+        ]
+    }
+]
+Anda harus mencatat bahwa pada Docker 1.12, memeriksa jaringan docker hanya menunjukkan wadah / tugas yang berjalan pada node lokal. Ini berarti 10.0.0.3 adalah alamat IPv4 dari wadah yang berjalan pada simpul kedua. Catat alamat IP ini untuk langkah selanjutnya (alamat IP di lab Anda mungkin berbeda dari yang ditunjukkan di sini di panduan lab).
+Langkah 4: Uji jaringan
+Untuk menyelesaikan langkah ini, Anda akan memerlukan alamat IP dari tugas layanan yang berjalan pada node2 yang Anda lihat pada langkah sebelumnya (10.0.0.3).
+
+Jalankan perintah berikut dari terminal pertama.
+docker network inspect overnet
+[
+    {
+        "Name": "overnet",
+        "Id": "wlqnvajmmzskn84bqbdi1ytuy",
+        "Created": "2017-04-04T09:35:47.362263887Z",
+        "Scope": "swarm",
+        "Driver": "overlay",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+"Subnet": "10.0.0.0/24",
+                    "Gateway": "10.0.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Containers": {
+            "d676496d18f76c34d3b79fbf6573a5672a81d725d7c8704b49b4f797f6426454": {
+                "Name": "myservice.2.nlozn82wsttv75cs9vs3ju7vs",
+                "EndpointID": "36638a55fcf4ada2989650d0dde193bc2f81e0e9e3c153d3e9d1d85e89a642e6",
+"MacAddress": "02:42:0a:00:00:04",
+                "IPv4Address": "10.0.0.4/24",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.driver.overlay.vxlanid_list": "4097"
+        },
+        "Labels": {},
+        "Peers": [
+            {
+"Name": "node1-f6a6f8e18a9d",
+                "IP": "10.0.0.5"
+            },
+            {
+                "Name": "node2-507a763bed93",
+                "IP": "10.0.0.6"
+            }
+        ]
+    }
+]
+Perhatikan bahwa alamat IP yang tercantum untuk menjalankan tugas layanan (wadah) berbeda dengan alamat IP untuk tugas layanan yang berjalan pada node kedua. Perhatikan juga bahwa mereka berada di jaringan "overnet" yang sama.
+
+Jalankan perintah buruh pelabuhan ps untuk mendapatkan ID tugas layanan sehingga Anda bisa masuk ke dalamnya di langkah berikutnya.
+docker ps
+CONTAINER ID        IMAGE                                                                            COMMAND                  CREATED             STATUS              PORTS                           NAMES
+d676496d18f7        ubuntu@sha256:dd7808d8792c9841d0b460122f1acf0a2dd1f56404f8d1e56298048885e45535   "sleep infinity"         10 minutes ago      Up 10 minutes                                       myservice.2.nlozn82wsttv75cs9vs3ju7vs
+<Snip>
+Masuk ke tugas layanan. Pastikan untuk menggunakan ID kontainer dari lingkungan Anda karena akan berbeda dari contoh di bawah ini. Kita dapat melakukan ini dengan menjalankan docker exec -it <CONTAINER ID> / bin / bash.
+docker exec -it yourcontainerid /bin/bash
+root@d676496d18f7:/#
+Instal perintah ping dan ping tugas layanan yang berjalan pada node kedua di mana ia memiliki alamat IP 10.0.0.3 dari jaringan buruh pelabuhan memeriksa perintah overnet.
+apt-get update && apt-get install -y iputils-ping
+Sekarang, mari kita ping 10.0.0.3.
+root@d676496d18f7:/# ping -c5 10.0.0.3
+PING 10.0.0.3 (10.0.0.3) 56(84) bytes of data.
+^C
+--- 10.0.0.3 ping statistics ---
+4 packets transmitted, 0 received, 100% packet loss, time 2998ms
+Output di atas menunjukkan bahwa kedua tugas dari layanan myservice berada di jaringan overlay yang sama yang mencakup kedua node dan mereka dapat menggunakan jaringan ini untuk berkomunikasi.
+Langkah 5: Uji penemuan layanan
+Sekarang setelah Anda memiliki layanan yang berfungsi menggunakan jaringan overlay, mari kita uji penemuan layanan.
+
+Jika Anda masih berada di dalam kontainer, masuk kembali ke dalamnya dengan docker exec -it <CONTAINER ID> / bin / bash command.
+
+Jalankan cat /etc/resolv.conf form di dalam wadah
+
+docker exec -it yourcontainerid /bin/bash
+cat /etc/resolv.conf
+search ivaf2i2atqouppoxund0tvddsa.jx.internal.cloudapp.net
+nameserver 127.0.0.11
+options ndots:0
+Nilai yang kami minati adalah server nama 127.0.0.11. Nilai ini mengirimkan semua permintaan DNS dari wadah ke resolver tertanam DNS yang berjalan di dalam wadah mendengarkan pada 127.0.0.11:53. Semua wadah Docker menjalankan server DNS tertanam di alamat ini.
+Coba dan ping nama "myservice" dari dalam wadah dengan menjalankan ping -c5 myservice.
+root@d676496d18f7:/# ping -c5 myservice
+PING myservice (10.0.0.2) 56(84) bytes of data.
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=0.020 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=0.052 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=64 time=0.044 ms
+64 bytes from 10.0.0.2: icmp_seq=4 ttl=64 time=0.042 ms
+64 bytes from 10.0.0.2: icmp_seq=5 ttl=64 time=0.056 ms
+--- myservice ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4001ms
+rtt min/avg/max/mdev = 0.020/0.042/0.056/0.015 ms
+Keluaran dengan jelas menunjukkan bahwa wadah dapat melakukan ping layanan layanan saya dengan nama. Perhatikan bahwa alamat IP yang dikembalikan adalah 10.0.0.2. Dalam beberapa langkah berikutnya, kami akan memverifikasi bahwa alamat ini adalah IP virtual (VIP) yang ditetapkan untuk layanan layanan saya.
+
+Ketik perintah keluar untuk meninggalkan sesi kontainer exec dan kembali ke prompt shell host Docker Anda.
+root@d676496d18f7:/# exit
+Periksa konfigurasi layanan "myservice" dengan menjalankan layanan buruh pelabuhan, periksa layanan myer. Mari kita verifikasi bahwa nilai VIP cocok dengan nilai yang dikembalikan oleh perintah myservice ping -c5 sebelumnya.
+docker service inspect myservice
+[
+    {
+        "ID": "ov30itv6t2n7axy2goqbfqt5e",
+        "Version": {
+            "Index": 19
+        },
+        "CreatedAt": "2017-04-04T09:35:47.009730798Z",
+        "UpdatedAt": "2017-04-04T09:35:47.05475096Z",
+        "Spec": {
+            "Name": "myservice",
+            "TaskTemplate": {
+                "ContainerSpec": {
+"Name": "myservice",
+            "TaskTemplate": {
+                "ContainerSpec": {
+                    "Image": "ubuntu:latest@sha256:dd7808d8792c9841d0b460122f1acf0a2dd1f56404f8d1e56298048885e45535",
+                    "Args": [
+                        "sleep",
+                        "infinity"
+                    ],
+<Snip>
+        "Endpoint": {
+            "Spec": {
+                "Mode": "vip"
+            },
+            "VirtualIPs": [
+                {
+"NetworkID": "wlqnvajmmzskn84bqbdi1ytuy",
+                    "Addr": "10.0.0.2/24"
+                }
+            ]
+        },
+<Snip>
+Ke bagian bawah output, Anda akan melihat VIP dari layanan yang terdaftar. VIP pada output di atas adalah 10.0.0.2 tetapi nilainya mungkin berbeda dalam pengaturan Anda. Poin penting yang perlu diperhatikan adalah bahwa VIP yang tercantum di sini cocok dengan nilai yang dikembalikan oleh perintah myservice ping -c5.
+
+Jangan ragu untuk membuat sesi exec buruh pelabuhan baru untuk tugas layanan (wadah) yang berjalan pada node2 dan melakukan perintah layanan ping -c5 yang sama. Anda akan mendapatkan respons dari VIP yang sama.
+Membersihkan
+Semoga Anda bisa belajar sedikit tentang cara kerja Docker Networking selama lab ini. Mari kita membersihkan layanan yang kita buat, wadah yang kita mulai, dan akhirnya menonaktifkan mode Swarm.
+
+Jalankan layanan buruh pelabuhan dengan perintah myservice untuk menghapus layanan yang disebut myservice.
+docker service rm myservice
+Jalankan perintah buruh pelabuhan ps untuk mendapatkan daftar wadah yang berjalan.
+docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                           NAMES
+846af8479944        ubuntu              "sleep infinity"         17 minutes ago      Up 17 minutes                                       heuristic_boyd
+4e0da45b0f16        nginx               "nginx -g 'daemon ..."   12 minutes ago      Up 12 minutes       443/tcp, 0.0.0.0:8080->80/tcp   web1
+Anda dapat menggunakan perintah docker kill <CONTAINER ID ...> untuk membunuh kontainer ubunut dan nginx yang kita mulai di awal.
+docker kill yourcontainerid1 yourcontainerid2
+Akhirnya, mari kita hapus node1 dan node2 dari Swarm. Kita dapat menggunakan perintah buruh pelabuhan meninggalkan - memaksa untuk melakukan itu.
+
+Mari kita jalankan docker swarm leave --force on node1.
+docker swarm leave --force
+Mari kita jalankan docker swarm leave --force on node2.
+docker swarm leave --force
+Selamat! Anda telah menyelesaikan lab ini!
